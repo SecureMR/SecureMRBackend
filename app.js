@@ -17,6 +17,7 @@ app.use(require('cors')());
 const errorHandlers = require('./handlers/errorHandler');
 app.use(errorHandlers.notFound);
 app.use(errorHandlers.mongooseErrors);
+// eslint-disable-next-line no-undef
 if (process.env.ENV == "DEVELOPMENT"){
     app.use(errorHandlers.developmentErrors);
 } else {

@@ -13,9 +13,9 @@ mongoose.connection.once('open', () => {
 
 // Bring in the models
 
-require('./models/User');
-require('./models/Chatroom');
-require('./models/Message');
+// require('./models/User');
+// require('./models/Chatroom');
+// require('./models/Message');
 
 
 const app = require('./app');
