@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 require("dotenv").config();
 
 // Bring in the models
@@ -20,7 +21,7 @@ const server = app.listen(process.env.PORT || 8000, () =>{
     console.log("Server listening on port 8000")
 });
 
-const jwt = require('jwt-then');
+// const jwt = require('jwt-then');
 
 const Affiliate = mongoose.model("Affiliate"); 
 const AffiliateType = mongoose.model("AffiliateType"); 

@@ -11,7 +11,7 @@ app.use(require('cors')());
 //Bring in the routes
 // app.use("/user", require("./routes/user"));
 // app.use("/chatroom", require("./routes/chatroom"));
-
+app.use( require("./routes/route"))
 
 //Setup Error Handlers
 const errorHandlers = require('./handlers/errorHandler');

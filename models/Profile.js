@@ -2,12 +2,10 @@ const mongoose = require("mongoose");
 
 const profileSchema = new mongoose.Schema({
     name: {
-        type: String,
-        required: 'Name is required!'
+        type: String
     },
     lastName: {
-        type: String,
-        required: 'Last name is required!'
+        type: String
     },
     email: {
         type: String,
@@ -18,8 +16,7 @@ const profileSchema = new mongoose.Schema({
         required: 'Address is required!'
     },
     birthDate: {
-        type: Date,
-        required: 'Address is required!'
+        type: Date
     },
 },
 {

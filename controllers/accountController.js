@@ -2,14 +2,14 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
-const Affiliate = mongoose.Model('Affiliate');
-const AffiliateType = mongoose.Model('AffiliateType');
-const ARS = mongoose.Model('ARS');
-const Credentials = mongoose.Model('Credentials');
-const Dependent = mongoose.Model('Dependent');
-const MedicalProfessional = mongoose.Model('MedicalProfessional');
-const Profile = mongoose.Model('Profile');
-const PSS = mongoose.Model('PSS');
+const Affiliate = mongoose.model('Affiliate');
+const AffiliateType = mongoose.model('AffiliateType');
+const ARS = mongoose.model('ARS');
+const Credentials = mongoose.model('Credentials');
+const Dependent = mongoose.model('Dependent');
+const MedicalProfessional = mongoose.model('MedicalProfessional');
+const Profile = mongoose.model('Profile');
+const PSS = mongoose.model('PSS');
 
 async function hashPassword(password) {
     return await bcrypt.hash(password, 10);
@@ -101,7 +101,53 @@ exports.createPSS = async (req, res, next) => {
 }
 
 exports.createARS = async (req, res, next) => {
+    const session = await conn.startSession();
+    try {
+        const { 
+            company,
+            username, 
+            password, 
+            email,
+            address
+        } = req.body
+        
+        const hashedPassword = await hashPassword(password);
+    
+        const newCredentials = new Credentials({
+            userName: username, 
+            password: hashedPassword,
+            role: "ars"
+        });
+    
+        const newProfile =  new Profile({
+            email: email,
+            address: address,
+        });
+    
+        const newARS = new ARS({
+            company: company
+        });
+        
+        session.startTransaction();
 
+        await newCredentials.save({session});
+        await newProfile.save({session});
+
+        newARS.credentials = newCredentials._id;
+        newARS.profile = newProfile._id;
+        
+        await newARS.save({session});
+
+        await session.commitTransaction();
+
+        res.json({
+            data: newARS
+        });
+
+    } catch (error) {
+        await session.abortTransaction();
+        throw error;
+    }
 }
 
 exports.createDependent = async (req, res, next) => {
