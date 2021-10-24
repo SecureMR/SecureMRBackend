@@ -1,17 +1,5 @@
 require("dotenv").config();
 
-const mongoose = require("mongoose");
-// eslint-disable-next-line no-undef
-mongoose.connect(process.env.DATABASE, {useNewUrlParser: true, useUnifiedTopology: true});
-
-mongoose.connection.on('error', (err) => {
-    console.log("Mongoose Connection ERROR " + err.message);
-});
-
-mongoose.connection.once('open', () => {
-    console.log("MongoDB Connected!");
-})
-
 // Bring in the models
 
 require('./models/Affiliate');

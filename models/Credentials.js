@@ -11,12 +11,18 @@ const credentialsSchema = new mongoose.Schema({
     },
     ipfsAddress:{
         type: String,
-        required: "IPFS Address is required!"
     },
     fingerprintHash:{
         type: String,
-        required: "Fingerprint Hash is required!"
     },
+    role: {
+        type: String,
+        default: "affiliate",
+        enum: ["pss","ars","affiliate","medicalProfessional","admin"]
+    },
+    accessToken: {
+        type: String
+    }
 },
 {
     timestamps: true,
