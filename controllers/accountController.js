@@ -97,7 +97,46 @@ exports.createAffiliate = async (req, res, next) => {
 }
 
 exports.createPSS = async (req, res, next) => {
+    const session = await conn.startSession();
+    try {
+        const { 
+            medicalCenter, 
+            address, 
+            userName,
+            password
+        } = req.body
+        
+        const hashedPassword = await hashPassword(password);
     
+        const newCredentials = new Credentials({
+            userName: userName, 
+            password: hashedPassword,
+            role: "ars"
+        });
+    
+        const newPSS = new PSS({
+            medicalCenter: medicalCenter,
+            address: address
+        });
+        
+        session.startTransaction();
+
+        await newCredentials.save({session});
+
+        newPSS.credentials = newCredentials._id;
+        
+        await newPSS.save({session});
+
+        await session.commitTransaction();
+
+        res.json({
+            data: newPSS
+        });
+
+    } catch (error) {
+        await session.abortTransaction();
+        throw error;
+    }
 }
 
 exports.createARS = async (req, res, next) => {
