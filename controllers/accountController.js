@@ -20,10 +20,10 @@ return await bcrypt.compare(plainPassword, hashedPassword);
 
 const conn = require('../models');
 
-exports.createAffiliate = async (req, res, next) => {
-
+exports.createAffiliate = async (req, res) => {
     const session = await conn.startSession();
     try {
+        session.startTransaction();
         const { 
             userName, 
             password, 
@@ -39,8 +39,12 @@ exports.createAffiliate = async (req, res, next) => {
             ars
         } = req.body
         
-        const idNumExists = Affiliate.findOne({idNumber: idNumber});
+        const idNumExists = await Affiliate.findOne({idNumber: idNumber});
         if(idNumExists) throw "User already has an account!"
+
+        const userARS = await ARS.findById(ars);
+        console.log(userARS._id);
+        if(!userARS) throw "ARS doesn't exist!";
 
         const hashedPassword = await hashPassword(password);
     
@@ -60,16 +64,9 @@ exports.createAffiliate = async (req, res, next) => {
     
         const newAffiliate = new Affiliate({
             idNumber: idNumber,
-            ssn: ssn
+            ssn: ssn,
+            ars: userARS._id
         });
-
-        const userARS = ARS.findById(ars);
-
-        if(!userARS) throw "ARS doesn't exist!";
-        
-        newAffiliate.ars = userARS._id;
-        
-        session.startTransaction();
 
         await newCredentials.save({session});
         await newProfile.save({session});
@@ -79,22 +76,23 @@ exports.createAffiliate = async (req, res, next) => {
         
         await newAffiliate.save({session});
 
+        await newAffiliate.populate('profile');
+        await newAffiliate.populate({path: 'credentials', select: 'userName role'});
+
         await session.commitTransaction();
+        await session.endSession();
 
         res.json({
             data: newAffiliate
         });
 
     } catch (error) {
-        if(session){
-            await session.abortTransaction();
-        }
-        
+        await session.abortTransaction();
         throw error;
     }
 }
 
-exports.createPSS = async (req, res, next) => {
+exports.createPSS = async (req, res) => {
     const session = await conn.startSession();
     try {
         const { 
@@ -137,7 +135,7 @@ exports.createPSS = async (req, res, next) => {
     }
 }
 
-exports.createARS = async (req, res, next) => {
+exports.createARS = async (req, res) => {
     const session = await conn.startSession();
     try {
         const { 
@@ -187,7 +185,7 @@ exports.createARS = async (req, res, next) => {
     }
 }
 
-exports.createDependent = async (req, res, next) => {
+exports.createDependent = async (req, res) => {
     const session = await conn.startSession();
     try {
         const { 
@@ -248,7 +246,7 @@ exports.createDependent = async (req, res, next) => {
     }
 }
 
-exports.getAffiliate = async (req, res, next) => {
+exports.getAffiliate = async (req, res) => {
     const {id} = req.body;
 
     const affiliate = await Affiliate.findById(id).populate({
@@ -263,7 +261,7 @@ exports.getAffiliate = async (req, res, next) => {
     });
 }
 
-exports.getDependent = async (req, res, next) => {
+exports.getDependent = async (req, res) => {
     const {id} = req.body;
 
     const dependent = await Dependent.findById(id).populate({
@@ -278,7 +276,7 @@ exports.getDependent = async (req, res, next) => {
     });
 }
 
-exports.getARS = async (req, res, next) => {
+exports.getARS = async (req, res) => {
     const {id} = req.body;
 
     const ars = await ARS.findById(id).populate({
@@ -293,7 +291,7 @@ exports.getARS = async (req, res, next) => {
     });
 }
 
-exports.getMedicalProfessional = async (req, res, next) => {
+exports.getMedicalProfessional = async (req, res) => {
     const {id} = req.body;
 
     const medprof = await MedicalProfessional.findById(id).populate({
@@ -308,7 +306,7 @@ exports.getMedicalProfessional = async (req, res, next) => {
     });
 }
 
-exports.getPSS = async (req, res, next) => {
+exports.getPSS = async (req, res) => {
     const {id} = req.body;
 
     const pss = await PSS.findById(id).populate({
@@ -323,7 +321,7 @@ exports.getPSS = async (req, res, next) => {
     });
 }
 
-exports.login = async (req, res, next) => {
+exports.login = async (req, res) => {
     const session = await conn.startSession();
     
     try {
