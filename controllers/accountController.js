@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
 const Affiliate = mongoose.model('Affiliate');
-const AffiliateType = mongoose.model('AffiliateType');
 const ARS = mongoose.model('ARS');
 const Credentials = mongoose.model('Credentials');
 const Dependent = mongoose.model('Dependent');
@@ -14,7 +13,7 @@ const PSS = mongoose.model('PSS');
 async function hashPassword(password) {
     return await bcrypt.hash(password, 10);
 }
-    
+
 async function validatePassword(plainPassword, hashedPassword) {
 return await bcrypt.compare(plainPassword, hashedPassword);
 }
@@ -36,7 +35,6 @@ exports.createAffiliate = async (req, res, next) => {
             birthdate,
             idNumber,
             ssn,
-            affiliateType,
             ars
         } = req.body
         
@@ -61,18 +59,13 @@ exports.createAffiliate = async (req, res, next) => {
             ssn: ssn
         });
 
-        const userAffiliateType = AffiliateType.findById(affiliateType);
         const userARS = ARS.findById(ars);
 
-        if(!userAffiliateType){
-            throw "Affiliate type doesn't exist!";
-        }
         if(!userARS){
             throw "ARS doesn't exist!";
         }
         
         newAffiliate.ars = userARS._id;
-        newAffiliate.affiliateType = userAffiliateType._id;
     
         session.startTransaction();
 
@@ -111,7 +104,7 @@ exports.createPSS = async (req, res, next) => {
         const newCredentials = new Credentials({
             userName: userName, 
             password: hashedPassword,
-            role: "ars"
+            role: "pss"
         });
     
         const newPSS = new PSS({
@@ -190,5 +183,106 @@ exports.createARS = async (req, res, next) => {
 }
 
 exports.createDependent = async (req, res, next) => {
-    
+    const session = await conn.startSession();
+    try {
+        const { 
+            name,
+            lastname,
+            email,
+            address,
+            birthdate,
+            username,
+            password,
+            affiliate
+        } = req.body
+        
+        const hashedPassword = await hashPassword(password);
+        
+        const newDependent = new Dependent();
+
+        const newProfile = new Profile({
+            name: name,
+            lastname: lastname,
+            email: email,
+            address: address,
+            birthdate: birthdate
+        });
+
+        const newCredentials = new Credentials({
+            userName: username, 
+            password: hashedPassword,
+            role: "dependent"
+        });
+
+        const dependentAffiliate = Affiliate.findById(affiliate);
+
+        if(!dependentAffiliate){
+            throw "Affiliate does not exist!";
+        }
+        
+        session.startTransaction();
+
+        await newCredentials.save({session});
+        await newProfile.save({session});
+        
+        newDependent.profile = newProfile._id;
+        newDependent.credentials = newCredentials._id;
+        newDependent.affiliate = dependentAffiliate._id;
+
+        await newDependent.save({session});
+
+        await session.commitTransaction();
+
+        res.json({
+            data: newDependent
+        });
+
+    } catch (error) {
+        await session.abortTransaction();
+        throw error;
+    }
+}
+
+exports.getAffiliate = async (req, res, next) => {
+    const {id} = req.body;
+
+    const affiliate = await Affiliate.findById(id).populate('credentials.userName');
+    if(!affiliate) throw "Affiliate doesn't exist!"
+
+    res.json({
+        data: affiliate
+    });
+}
+
+exports.getDependent = async (req, res, next) => {
+    const {id} = req.body;
+
+    const dependent = await Dependent.findById(id).populate('credentials.userName');
+    if(!dependent) throw "Dependent doesn't exist!"
+
+    res.json({
+        data: dependent
+    });
+}
+
+exports.getARS = async (req, res, next) => {
+    const {id} = req.body;
+
+    const ars = await ARS.findById(id).populate('credentials.userName');
+    if(!ars) throw "ARS doesn't exist!"
+
+    res.json({
+        data: ars
+    });
+}
+
+exports.getMedicalProfessional = async (req, res, next) => {
+    const {id} = req.body;
+
+    const medprof = await MedicalProfessional.findById(id).populate('credentials.userName');
+    if(!medprof) throw "Medical Professional doesn't exist!"
+
+    res.json({
+        data: medprof
+    });
 }

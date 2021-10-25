@@ -18,7 +18,7 @@ const credentialsSchema = new mongoose.Schema({
     role: {
         type: String,
         default: "affiliate",
-        enum: ["pss","ars","affiliate","medicalProfessional","admin"]
+        enum: ["pss", "ars", "affiliate", "dependent", "medicalProfessional", "admin"]
     },
     accessToken: {
         type: String

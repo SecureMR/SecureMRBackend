@@ -13,11 +13,6 @@ const affiliateSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Document",
     }],
-    affiliateType: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "AffiliateType",
-        required: "Affiliate type is required!"
-    },
     dependents: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Dependent"
