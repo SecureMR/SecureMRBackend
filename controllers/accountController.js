@@ -21,37 +21,41 @@ return await bcrypt.compare(plainPassword, hashedPassword);
 const conn = require('../models');
 
 exports.createAffiliate = async (req, res, next) => {
+
     const session = await conn.startSession();
     try {
         const { 
-            username, 
+            userName, 
             password, 
             ipfsAddress,
             fingerprintHash,
             name,
-            lastname,
+            lastName,
             email,
             address,
-            birthdate,
+            birthDate,
             idNumber,
             ssn,
             ars
         } = req.body
         
+        const idNumExists = Affiliate.findOne({idNumber: idNumber});
+        if(idNumExists) throw "User already has an account!"
+
         const hashedPassword = await hashPassword(password);
     
         const newCredentials = new Credentials({
-            userName: username, 
+            userName: userName, 
             password: hashedPassword,
             role: "affiliate"
         });
     
         const newProfile =  new Profile({
             name: name,
-            lastName: lastname,
+            lastName: lastName,
             email: email,
             address: address,
-            birthDate: birthdate
+            birthDate: birthDate
         });
     
         const newAffiliate = new Affiliate({
@@ -61,12 +65,10 @@ exports.createAffiliate = async (req, res, next) => {
 
         const userARS = ARS.findById(ars);
 
-        if(!userARS){
-            throw "ARS doesn't exist!";
-        }
+        if(!userARS) throw "ARS doesn't exist!";
         
         newAffiliate.ars = userARS._id;
-    
+        
         session.startTransaction();
 
         await newCredentials.save({session});
@@ -84,7 +86,10 @@ exports.createAffiliate = async (req, res, next) => {
         });
 
     } catch (error) {
-        await session.abortTransaction();
+        if(session){
+            await session.abortTransaction();
+        }
+        
         throw error;
     }
 }
@@ -137,7 +142,7 @@ exports.createARS = async (req, res, next) => {
     try {
         const { 
             company,
-            username, 
+            userName, 
             password, 
             email,
             address
@@ -146,7 +151,7 @@ exports.createARS = async (req, res, next) => {
         const hashedPassword = await hashPassword(password);
     
         const newCredentials = new Credentials({
-            userName: username, 
+            userName: userName, 
             password: hashedPassword,
             role: "ars"
         });
@@ -187,11 +192,11 @@ exports.createDependent = async (req, res, next) => {
     try {
         const { 
             name,
-            lastname,
+            lastName,
             email,
             address,
-            birthdate,
-            username,
+            birthDate,
+            userName,
             password,
             affiliate
         } = req.body
@@ -202,14 +207,14 @@ exports.createDependent = async (req, res, next) => {
 
         const newProfile = new Profile({
             name: name,
-            lastname: lastname,
+            lastname: lastName,
             email: email,
             address: address,
-            birthdate: birthdate
+            birthdate: birthDate
         });
 
         const newCredentials = new Credentials({
-            userName: username, 
+            userName: userName, 
             password: hashedPassword,
             role: "dependent"
         });
@@ -246,7 +251,11 @@ exports.createDependent = async (req, res, next) => {
 exports.getAffiliate = async (req, res, next) => {
     const {id} = req.body;
 
-    const affiliate = await Affiliate.findById(id).populate('credentials.userName');
+    const affiliate = await Affiliate.findById(id).populate({
+        path: 'credentials',
+        select: 'userName role'
+    });
+
     if(!affiliate) throw "Affiliate doesn't exist!"
 
     res.json({
@@ -257,7 +266,11 @@ exports.getAffiliate = async (req, res, next) => {
 exports.getDependent = async (req, res, next) => {
     const {id} = req.body;
 
-    const dependent = await Dependent.findById(id).populate('credentials.userName');
+    const dependent = await Dependent.findById(id).populate({
+        path: 'credentials',
+        select: 'userName role'
+    });
+
     if(!dependent) throw "Dependent doesn't exist!"
 
     res.json({
@@ -268,7 +281,11 @@ exports.getDependent = async (req, res, next) => {
 exports.getARS = async (req, res, next) => {
     const {id} = req.body;
 
-    const ars = await ARS.findById(id).populate('credentials.userName');
+    const ars = await ARS.findById(id).populate({
+        path: 'credentials',
+        select: 'userName role'
+    });
+
     if(!ars) throw "ARS doesn't exist!"
 
     res.json({
@@ -279,10 +296,61 @@ exports.getARS = async (req, res, next) => {
 exports.getMedicalProfessional = async (req, res, next) => {
     const {id} = req.body;
 
-    const medprof = await MedicalProfessional.findById(id).populate('credentials.userName');
+    const medprof = await MedicalProfessional.findById(id).populate({
+        path: 'credentials',
+        select: 'userName role'
+    });
+
     if(!medprof) throw "Medical Professional doesn't exist!"
 
     res.json({
         data: medprof
     });
+}
+
+exports.getPSS = async (req, res, next) => {
+    const {id} = req.body;
+
+    const pss = await PSS.findById(id).populate({
+        path: 'credentials',
+        select: 'userName role'
+    });
+
+    if(!pss) throw "PSS doesn't exist!"
+
+    res.json({
+        data: pss
+    });
+}
+
+exports.login = async (req, res, next) => {
+    const session = await conn.startSession();
+    
+    try {
+        const { userName, password } = req.body;
+        const user = await Credentials.findOne({ userName });
+        if (!user) throw "User doesn't exist"
+        
+        const validPassword = await validatePassword(password, user.password);
+        if (!validPassword) throw 'Password is not correct';
+        
+        const accessToken = jwt.sign({ userId: user._id }, process.env.SECRET, {
+        expiresIn: "1d"
+        });
+
+        session.startTransaction();
+
+        await Credential.findByIdAndUpdate(user._id, { accessToken })
+
+        await session.commitTransaction();
+
+        res.status(200).json({
+            data: { userName: user.userName, role: user.role },
+            accessToken
+        });
+    } catch(error) {
+        session.abortTransaction();
+        throw error;
+    }
+    
 }
