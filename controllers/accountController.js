@@ -24,6 +24,7 @@ exports.createAffiliate = async (req, res) => {
     const session = await conn.startSession();
     try {
         session.startTransaction();
+
         const { 
             userName, 
             password, 
@@ -92,9 +93,84 @@ exports.createAffiliate = async (req, res) => {
     }
 }
 
+exports.createMedicalProfessional = async (req, res) => {
+    const session = await conn.startSession();
+
+    try {
+        session.startTransaction();
+        const { 
+            specialty,
+            medicalLicense,
+            pss,
+            userName,
+            password,
+            ipfsAddress,
+            fingerprintHash,
+            name,
+            lastName,
+            email,
+            address,
+            birthDate
+        } = req.body
+        
+        const pssExists = await PSS.findById(pss);
+        if (!pssExists) throw "PSS doesn't exist!"
+
+        const medicalLicenseExists = await MedicalProfessional.findOne({medicalLicense: medicalLicense});
+        if(medicalLicenseExists) throw "User already has an account!"
+
+        const hashedPassword = await hashPassword(password);
+    
+        const newCredentials = new Credentials({
+            userName: userName, 
+            password: hashedPassword,
+            role: "medicalProfessional"
+        });
+    
+        const newProfile =  new Profile({
+            name: name,
+            lastName: lastName,
+            email: email,
+            address: address,
+            birthDate: birthDate
+        });
+
+        const newMedicalProf = new MedicalProfessional({
+            specialty: specialty,
+            medicalLicense: medicalLicense,
+            pss: pssExists._id,
+        });
+
+        await newCredentials.save({session});
+        await newProfile.save({session});
+
+        newMedicalProf.credentials = newCredentials._id;
+        newMedicalProf.profile = newProfile._id;
+
+        await newMedicalProf.save({session});
+
+        await newMedicalProf.populate('profile');
+        await newMedicalProf.populate({path: 'credentials', select: 'userName role'});
+        
+        await session.commitTransaction();
+        await session.endSession();
+
+        res.json({
+            data: newMedicalProf
+        });
+
+    } catch (error) {
+        await session.abortTransaction();
+        throw error;
+    }
+}
+
+
 exports.createPSS = async (req, res) => {
     const session = await conn.startSession();
     try {
+        session.startTransaction();
+
         const { 
             medicalCenter, 
             address, 
@@ -115,15 +191,16 @@ exports.createPSS = async (req, res) => {
             address: address
         });
         
-        session.startTransaction();
-
         await newCredentials.save({session});
 
         newPSS.credentials = newCredentials._id;
         
         await newPSS.save({session});
 
+        await newPSS.populate({path: 'credentials', select: 'userName role'});
+
         await session.commitTransaction();
+        await session.endSession();
 
         res.json({
             data: newPSS
@@ -138,6 +215,8 @@ exports.createPSS = async (req, res) => {
 exports.createARS = async (req, res) => {
     const session = await conn.startSession();
     try {
+        session.startTransaction();
+
         const { 
             company,
             userName, 
@@ -163,7 +242,6 @@ exports.createARS = async (req, res) => {
             company: company
         });
         
-        session.startTransaction();
 
         await newCredentials.save({session});
         await newProfile.save({session});
@@ -173,7 +251,11 @@ exports.createARS = async (req, res) => {
         
         await newARS.save({session});
 
+        await newARS.populate('profile');
+        await newARS.populate({path: 'credentials', select: 'userName role'});
+
         await session.commitTransaction();
+        await session.endSession();
 
         res.json({
             data: newARS
@@ -188,6 +270,7 @@ exports.createARS = async (req, res) => {
 exports.createDependent = async (req, res) => {
     const session = await conn.startSession();
     try {
+        session.startTransaction();
         const { 
             name,
             lastName,
@@ -222,8 +305,6 @@ exports.createDependent = async (req, res) => {
         if(!dependentAffiliate){
             throw "Affiliate does not exist!";
         }
-        
-        session.startTransaction();
 
         await newCredentials.save({session});
         await newProfile.save({session});
@@ -235,6 +316,7 @@ exports.createDependent = async (req, res) => {
         await newDependent.save({session});
 
         await session.commitTransaction();
+        await session.endSession();
 
         res.json({
             data: newDependent
@@ -249,12 +331,16 @@ exports.createDependent = async (req, res) => {
 exports.getAffiliate = async (req, res) => {
     const {id} = req.body;
 
-    const affiliate = await Affiliate.findById(id).populate({
+    const affiliate = await Affiliate.findById(id);
+
+    if(!affiliate) throw "Affiliate doesn't exist!"
+
+    await affiliate.populate({
         path: 'credentials',
         select: 'userName role'
     });
 
-    if(!affiliate) throw "Affiliate doesn't exist!"
+    await affiliate.populate('profile');
 
     res.json({
         data: affiliate
@@ -264,12 +350,16 @@ exports.getAffiliate = async (req, res) => {
 exports.getDependent = async (req, res) => {
     const {id} = req.body;
 
-    const dependent = await Dependent.findById(id).populate({
+    const dependent = await Dependent.findById(id);
+
+    if(!dependent) throw "Dependent doesn't exist!";
+
+    await dependent.populate({
         path: 'credentials',
         select: 'userName role'
     });
 
-    if(!dependent) throw "Dependent doesn't exist!"
+    await dependent.populate('profile');
 
     res.json({
         data: dependent
@@ -279,12 +369,16 @@ exports.getDependent = async (req, res) => {
 exports.getARS = async (req, res) => {
     const {id} = req.body;
 
-    const ars = await ARS.findById(id).populate({
-        path: 'credentials',
-        select: 'userName role'
-    });
+    const ars = await ARS.findById(id);
 
     if(!ars) throw "ARS doesn't exist!"
+
+    await ars.populate({
+        path: 'credentials',
+        select: 'userName role'
+    }); 
+
+    await ars.populate('profile');
 
     res.json({
         data: ars
@@ -294,12 +388,16 @@ exports.getARS = async (req, res) => {
 exports.getMedicalProfessional = async (req, res) => {
     const {id} = req.body;
 
-    const medprof = await MedicalProfessional.findById(id).populate({
+    const medprof = await MedicalProfessional.findById(id);
+
+    if(!medprof) throw "Medical Professional doesn't exist!";
+
+    await medprof.populate({
         path: 'credentials',
         select: 'userName role'
     });
 
-    if(!medprof) throw "Medical Professional doesn't exist!"
+    await medprof.populate('profile');
 
     res.json({
         data: medprof
@@ -309,12 +407,14 @@ exports.getMedicalProfessional = async (req, res) => {
 exports.getPSS = async (req, res) => {
     const {id} = req.body;
 
-    const pss = await PSS.findById(id).populate({
+    const pss = await PSS.findById(id);
+
+    if(!pss) throw "PSS doesn't exist!";
+
+    await pss.populate({
         path: 'credentials',
         select: 'userName role'
     });
-
-    if(!pss) throw "PSS doesn't exist!"
 
     res.json({
         data: pss
@@ -325,6 +425,7 @@ exports.login = async (req, res) => {
     const session = await conn.startSession();
     
     try {
+        session.startTransaction();
         const { userName, password } = req.body;
         const user = await Credentials.findOne({ userName });
         if (!user) throw "User doesn't exist"
@@ -336,11 +437,10 @@ exports.login = async (req, res) => {
         expiresIn: "1d"
         });
 
-        session.startTransaction();
-
-        await Credential.findByIdAndUpdate(user._id, { accessToken })
+        await Credentials.findByIdAndUpdate(user._id, { accessToken })
 
         await session.commitTransaction();
+        await session.endSession();
 
         res.status(200).json({
             data: { userName: user.userName, role: user.role },
