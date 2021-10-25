@@ -1,11 +1,11 @@
 const mongoose = require("mongoose");
 
 const pssSchema = new mongoose.Schema({
-    MedicalCenter:{
+    medicalCenter:{
         type: String,
         required: "Medical Center name is required!"
     },
-    Address:{
+    address:{
         type: String,
         required: "Address is required!"
     },
