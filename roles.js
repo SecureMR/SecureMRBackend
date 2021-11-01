@@ -3,19 +3,29 @@ const AccessControl = require("accesscontrol");
 const ac = new AccessControl();
  
 exports.roles = (function() {
-ac.grant("basic")
+ac.grant("affiliate")
  .readOwn("profile")
  .updateOwn("profile")
+ .readOwn("documents")
+ .updateOwn("documents")
+ .readOwn("contacts")
+ .updateOwn("contacts");
  
-ac.grant("supervisor")
- .extend("basic")
- .readAny("profile")
+ac.grant("pss")
+ .readOwn("profile")
+ .updateOwn("profile")
+ .readOwn("documents")
+ .updateOwn("documents");
  
 ac.grant("admin")
- .extend("basic")
- .extend("supervisor")
- .updateAny("profile")
- .deleteAny("profile")
+ .readAny("users")
+
+ac.grant("medicalProfessional")
+ .readOwn("profile")
+ .updateOwn("profile")
+ .readOwn("documents")
+ .updateOwn("documents");
+
  
 return ac;
 })();
