@@ -36,6 +36,30 @@ const affiliateSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "MedicalProfessional"
     }],
+    trustedUsers: [{
+        idUser: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Credentials"
+        },
+        expDate : {
+            type: Date
+        }
+    }],
+    documentHistory: [{
+        action: {
+            type: String
+        },
+        date: {
+            type: Date
+        },
+        affectedObject: {
+            type: String,
+            enum: ["trustedUser", "documentShare"]
+        },
+        objectId: {
+            type: mongoose.Schema.Types.ObjectId
+        }
+    }]
 },
 {
     timestamps: true,
