@@ -85,11 +85,3 @@ exports.deleteDocument = async (req, res) => {
         throw error;
     }
 }
-
-exports.giveAccess = async (req, res) => {
-
-}
-
-exports.removeAcess = async (req, res) => {
-
-}

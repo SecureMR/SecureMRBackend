@@ -37,29 +37,44 @@ const affiliateSchema = new mongoose.Schema({
         ref: "MedicalProfessional"
     }],
     trustedUsers: [{
-        idUser: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Credentials"
+    }],
+    documentRequests: [{
+        _id: {
+            type: mongoose.Schema.Types.ObjectId,
+            index: true,
+            required: true,
+            auto: true,
+        },
+        message: {
+            type: String
+        },
+        petitioner: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Credentials"
         },
-        expDate : {
-            type: Date
-        }
-    }],
-    documentHistory: [{
-        action: {
-            type: String
-        },
-        date: {
-            type: Date
-        },
-        affectedObject: {
+        state: {
             type: String,
-            enum: ["trustedUser", "documentShare"]
-        },
-        objectId: {
-            type: mongoose.Schema.Types.ObjectId
+            default: "Pending",
+            enum: ["Pending", "Approved", "Denied"]
         }
     }]
+    // documentHistory: [{
+    //     action: {
+    //         type: String
+    //     },
+    //     date: {
+    //         type: Date
+    //     },
+    //     affectedObject: {
+    //         type: String,
+    //         enum: ["trustedUser", "documentShare"]
+    //     },
+    //     objectId: {
+    //         type: mongoose.Schema.Types.ObjectId
+    //     }
+    // }]
 },
 {
     timestamps: true,

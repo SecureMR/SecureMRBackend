@@ -28,7 +28,11 @@ const documentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Affiliate",
         required: "Affiliate is required!"
-    }
+    },
+    permittedUsers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Credentials"
+    }]
 },
 {
     timestamps: true,

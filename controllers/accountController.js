@@ -242,7 +242,6 @@ exports.createARS = async (req, res) => {
             company: company
         });
         
-
         await newCredentials.save({session});
         await newProfile.save({session});
 
