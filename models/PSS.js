@@ -17,11 +17,7 @@ const pssSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Credentials",
         required: "Credentials is required!"
-    },
-    documents:[{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Document",
-    }]
+    }
 },
 {
     timestamps: true,

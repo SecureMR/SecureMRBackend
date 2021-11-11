@@ -8,11 +8,7 @@ const affiliateSchema = new mongoose.Schema({
     ssn: {
         type: String,
         required: "ID Number is required!"
-    }, 
-    documents: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Document",
-    }],
+    },
     dependents: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Dependent"

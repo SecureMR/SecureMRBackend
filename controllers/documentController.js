@@ -1,16 +1,20 @@
 const mongoose = require('mongoose');
 
-const Affiliate = mongoose.Model('Affiliate');
-const ARS = mongoose.Model('ARS');
-const Document = mongoose.Model('Document');
-const DocType = mongoose.Model('DocType');
-const PSS = mongoose.Model('PSS');
+const Affiliate = mongoose.model('Affiliate');
+const ARS = mongoose.model('ARS');
+const Document = mongoose.model('Document');
+const DocType = mongoose.model('DocType');
+const PSS = mongoose.model('PSS');
+
+const conn = require('../models');
 
 exports.addDocument = async (req, res) => {
     const session = await conn.startSession();
     try {
         session.startTransaction();
+
         const { 
+            title,
             docDate,
             ipfsHash,
             docType,
@@ -18,13 +22,13 @@ exports.addDocument = async (req, res) => {
             ars,
             affiliate
         } = req.body
-        
+
         const affiliateExists = await Affiliate.findById(affiliate);
         if(!affiliateExists) throw "Affiliate doesn't exist!"
 
         const pssExists = await PSS.findById(pss);
         if(!pssExists) throw "PSS doesn't exist!";
-        
+
         const arsExists = await ARS.findById(ars);
         if(!arsExists) throw "ARS doesn't exist!";
 
@@ -33,23 +37,18 @@ exports.addDocument = async (req, res) => {
             ipfsHash: ipfsHash,
             docType: docType,
             pss: pssExists._id,
+            title: title,
             ars: ars._id,
-            affiliate: affiliate._id
+            affiliate: affiliateExists._id
         });
 
         await newDocument.save({session});
-
-        affiliateExists.documents.push(newDocument);
-        await affiliateExists.save({session});
-
-        pss.documents.push(newDocument);
-        await pss.save({session});
 
         await session.commitTransaction();
         await session.endSession();
 
         res.json({
-            data: newDependent
+            data: newDocument
         });
 
     } catch (error) {
@@ -77,7 +76,7 @@ exports.deleteDocument = async (req, res) => {
         await session.endSession();
 
         res.json({
-            data: newDependent
+            message: "Document deleted successfully"
         });
 
     } catch (error) {

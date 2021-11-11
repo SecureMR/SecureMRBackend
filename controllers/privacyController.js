@@ -188,7 +188,7 @@ exports.getOneDocumentTrustedUser = async (req, res) => {
     const trustedUserExists = await Credentials.findOne({userName: trustedUserName});
     if(!trustedUserExists) throw "User doesn't exist!";
 
-    const exists = await Affiliate.findOne({"trustedUsers._id": trustedUserExists._id});
+    const exists = await Affiliate.findOne({"trustedUsers": trustedUserExists._id});
     if (!exists) {
         throw "Trusted user is not in affiliate's list";
     }
@@ -212,7 +212,7 @@ exports.getDocumentsTrustedUser = async (req, res) => {
     const trustedUserExists = await Credentials.findOne({userName: trustedUserName});
         if(!trustedUserExists) throw "User doesn't exist!";
 
-    const exists = await Affiliate.findOne({"trustedUsers._id": trustedUserExists._id});
+    const exists = await Affiliate.findOne({"trustedUsers": trustedUserExists._id});
     if (!exists) {
         throw "Trusted user is not in affiliate's list";
     }
