@@ -12,19 +12,16 @@ const conn = require('../models');
 
 exports.getTrustedUsers = async (req, res) => {
     try {
-        const { 
-            affiliate
-        } = req.body
+        const creds = res.locals.loggedInUser;
+        if (creds.role != 'affiliate') throw "You don't have enough permission to perform this action"
         
-        const affiliateExists = await Affiliate.findById(affiliate);
+        const affiliateExists = await Affiliate.findOne({credentials: creds._id});
         if(!affiliateExists) throw "Affiliate doesn't exist!";
 
         await affiliateExists.populate({
             path: 'trustedUsers',
             select: 'userName role'
         });
-
-        console.log(affiliateExists);
 
         res.json({
             data: affiliateExists.trustedUsers
@@ -41,11 +38,13 @@ exports.addTrustedUser = async (req, res) => {
         session.startTransaction();
 
         const { 
-            affiliate,
             trustedUserName,
         } = req.body
     
-        const affiliateExists = await Affiliate.findById(affiliate);
+        const creds = res.locals.loggedInUser;
+        if (creds.role != 'affiliate') throw "You don't have enough permission to perform this action";
+
+        const affiliateExists = await Affiliate.findOne({credentials: creds._id});
         if(!affiliateExists) throw "Affiliate doesn't exist!";
 
         const trustedUserExists = await Credentials.findOne({userName: trustedUserName});
@@ -80,9 +79,12 @@ exports.deleteTrustedUser = async (req, res) => {
     const session = await conn.startSession();
     try {
         session.startTransaction();
-        const { affiliate, trustedUserName  } = req.body;
+        const { trustedUserName  } = req.body;
 
-        const affiliateExists = await Affiliate.findById(affiliate).populate('trustedUsers');
+        const creds = res.locals.loggedInUser;
+        if (creds.role != 'affiliate') throw "You don't have enough permission to perform this action";
+
+        const affiliateExists = await Affiliate.findOne({credentials: creds._id}).populate('trustedUsers');
         if(!affiliateExists) throw "Affiliate does not exist!";
 
         const trustedUserExists = await Credentials.findOne({userName: trustedUserName});
@@ -115,12 +117,15 @@ exports.requestDocuments = async (req, res) => {
     try {
         session.startTransaction();
         
-        const { message, petitioner, affiliate } = req.body;
+        const { message, affiliate } = req.body;
+
+        const creds = res.locals.loggedInUser;
+        if (creds.role != 'medicalProfessional' || creds.role != 'pss' || creds.role != 'ars') throw "You don't have enough permission to perform this action";
 
         const affiliateExists = await Affiliate.findById(affiliate).populate('trustedUsers');
         if(!affiliateExists) throw "Affiliate does not exist!";
 
-        const petitionerExists = await Credentials.findById(petitioner);
+        const petitionerExists = await Credentials.findOne({credentials: creds._id});
         if(!petitionerExists) throw "Petitioner does not exist!";
 
         var documentrequest = affiliateExists.documentRequests.push({message: message, petitioner: petitionerExists._id, state: "Pending"});
@@ -145,12 +150,15 @@ exports.changeDocumentRequestState = async (req, res) => {
     try {
         session.startTransaction();
         
-        const { requestId, affiliate, state } = req.body;
+        const { requestId, state } = req.body;
+
+        const creds = res.locals.loggedInUser;
+        if (creds.role != 'affiliate') throw "You don't have enough permission to perform this action";
 
         if(!mongoose.Types.ObjectId.isValid(requestId)) throw "RequestId is not formatted correctly!";
         if(!mongoose.Types.ObjectId.isValid(affiliate)) throw "RequestId is not formatted correctly!"
 
-        const affiliateExists = await Affiliate.findById(affiliate).populate('documentRequests');
+        const affiliateExists = await Affiliate.findOne({credentials: creds._id}).populate('documentRequests');
         if(!affiliateExists) throw "Affiliate does not exist!";
 
         var returnval = await Affiliate.updateOne(
@@ -223,3 +231,13 @@ exports.getDocumentsTrustedUser = async (req, res) => {
         data: documents
     });
 }
+
+// exports.getAffiliates = async (req, res) => {
+//     const creds = res.locals.loggedInUser;
+//     if (creds.role != 'affiliate') throw "You don't have enough permission to perform this action";
+
+//     const medicalProfessionalExists = await MedicalProfessional.findOne({credentials: creds._id});
+//     if(!medicalProfessionalExists) throw "Medical Professional does not exist!";
+
+//     const exists = await Affiliate.findOne({""})
+// }

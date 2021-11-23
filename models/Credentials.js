@@ -9,9 +9,9 @@ const credentialsSchema = new mongoose.Schema({
         type: String,
         required: "Password is required!"
     },
-    ipfsAddress:{
+    ipfsAddress:[{
         type: String,
-    },
+    }],
     fingerprintHash:{
         type: String,
     },

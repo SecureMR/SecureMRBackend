@@ -330,7 +330,7 @@ exports.createDependent = async (req, res) => {
 exports.getAffiliate = async (req, res) => {
     const {id} = req.body;
 
-    const affiliate = await Affiliate.findById(id);
+    const affiliate = await Affiliate.findById(id).select('-dependents -trustedUsers -documentRequests');
 
     if(!affiliate) throw "Affiliate doesn't exist!"
 
@@ -368,7 +368,7 @@ exports.getDependent = async (req, res) => {
 exports.getARS = async (req, res) => {
     const {id} = req.body;
 
-    const ars = await ARS.findById(id);
+    const ars = await ARS.findById(id).select('-documents -affiliates');
 
     if(!ars) throw "ARS doesn't exist!"
 
@@ -451,3 +451,17 @@ exports.login = async (req, res) => {
     }
     
 }
+
+exports.allowIfLoggedin = async (req, res, next) => {
+    try {
+     const user = res.locals.loggedInUser;
+     if (!user)
+      return res.status(401).json({
+       error: "You need to be logged in to access this route"
+      });
+      req.user = user;
+      next();
+     } catch (error) {
+      next(error);
+     }
+   }
