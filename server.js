@@ -12,6 +12,7 @@ require('./models/Document');
 require('./models/MedicalProfessional');
 require('./models/Profile');
 require('./models/PSS');
+require('./models/Contact');
 
 const app = require('./app');
 
@@ -43,3 +44,4 @@ const Document = mongoose.model("Document");
 const MedicalProfessional = mongoose.model("MedicalProfessional"); 
 const Profile = mongoose.model("Profile"); 
 const PSS = mongoose.model("PSS"); 
+const Contact = mongoose.model("Contact");

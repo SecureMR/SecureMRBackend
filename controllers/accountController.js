@@ -465,3 +465,38 @@ exports.allowIfLoggedin = async (req, res, next) => {
       next(error);
      }
    }
+
+   // Contacts
+
+exports.sendContactRequest = async (req, res) => {
+    const session = await conn.startSession();
+
+    try {
+        sessions.startTransaction();
+
+        const accessToken = req.headers["x-access-token"];
+        if(!accessToken) throw "Access token is needed";
+
+        const credential = await Credentials.findOne({accessToken: accessToken});
+        
+
+        const {requester, recipient} = req.body;
+
+        if(!mongoose.Types.ObjectId.isValid(requester)) throw "Requester ID is not formatted correctly!";
+        if(!mongoose.Types.ObjectId.isValid(recipient)) throw "Recipient ID is not formatted correctly!";
+
+        const requesterCredential = await Credentials.findById(requester);
+        if(!requesterCredential) throw "Requester doesn't exist";
+
+        const recipientCredential = await Credentials.findById(recipient);
+        if(!recipientCredential) throw "Recipient doesn't exist";
+
+        
+
+
+    }
+    catch(error){
+        session.abortTransaction();
+        throw error;
+    }
+}
