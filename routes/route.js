@@ -6,6 +6,7 @@ const documentController = require('../controllers/documentController');
 const {catchErrors} = require('../handlers/errorHandler');
 
 router.post("/accounts/login", catchErrors(accountController.login));
+router.post("/accounts/checkToken", catchErrors(accountController.checkToken));
 
 router.post("/accounts/affiliate/create",catchErrors(accountController.createAffiliate));
 router.post("/accounts/ars/create", catchErrors(accountController.createARS));
