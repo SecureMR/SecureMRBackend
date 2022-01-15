@@ -430,9 +430,12 @@ exports.login = async (req, res) => {
         if (!user) throw "User doesn't exist"
         
         const validPassword = await validatePassword(password, user.password);
-        if (!validPassword) throw 'Password is not correct';
+        if (!validPassword) {
+            res.status(403);
+            return;
+        }
         
-        const accessToken = jwt.sign({ iat: user._id, name: user.userName}, process.env.SECRET, {
+        const accessToken = jwt.sign({ userId: user._id }, process.env.SECRET, {
         expiresIn: "1d"
         });
 
@@ -442,8 +445,7 @@ exports.login = async (req, res) => {
         await session.endSession();
 
         res.status(200).json({
-            data: { userName: user.userName, role: user.role },
-            accessToken
+            data: { userName: user.userName, role: user.role, accessToken: accessToken },
         });
     } catch(error) {
         session.abortTransaction();
@@ -451,33 +453,6 @@ exports.login = async (req, res) => {
     }
     
 }
-
-exports.checkToken = async (req, res) => {
-    const {accessToken} = req.body;
-    
-    if (!accessToken) {
-        res.status(401).json({
-            message: "No Token Provided!"
-        });
-        return;
-    }
-
-    const user = await Credentials.findOne({accessToken: accessToken});
-        console.log(user)
-    
-    if(!user) {
-        res.status(204).json({
-            message: "Token is invalid!"
-        });
-        return;
-    }
-
-    res.status(200).json({
-        message: "Success",
-        accessToken: user.accessToken
-    })
-}
-
 
 exports.allowIfLoggedin = async (req, res, next) => {
     try {
@@ -526,4 +501,34 @@ exports.sendContactRequest = async (req, res) => {
         session.abortTransaction();
         throw error;
     }
+}
+
+exports.checkToken = async (req, res) => { 
+
+    const {accessToken} = req.body;
+    if (!accessToken){
+        return res.status(401).json({
+            message: "Token not provided!"
+        });
+    }
+
+    try {
+        jwt.verify(accessToken, process.env.SECRET);
+    } catch (err) {
+        return res.status(401).json({message: "Token is invalid!"});
+    }
+
+    var user = await Credentials.findOne({accessToken: accessToken});
+    if (!user){
+        return res.status(401).json({message: "Token is invalid!"});
+    }
+
+    return res.status(200).json({
+        message: "Success",
+        data: {
+            accessToken: user.accessToken,
+            userName: user.userName,
+            role: user.role
+        }
+    });
 }
