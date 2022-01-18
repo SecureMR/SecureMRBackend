@@ -8,6 +8,8 @@ const PSS = mongoose.model('PSS');
 
 const conn = require('../models');
 
+const helpers = require('../helpers/helpers')
+
 exports.addDocument = async (req, res) => {
     const session = await conn.startSession();
     try {
@@ -83,4 +85,42 @@ exports.deleteDocument = async (req, res) => {
         await session.abortTransaction();
         throw error;
     }
+}
+
+exports.testUploadDocument = async (req, res, next) => {
+    try {
+        const token = req.headers.authorization;
+        const accessToken = token.split(' ')[1];
+        const payload = await jwt.verify(accessToken, process.env.SECRET);
+
+        const myFile = req.file
+        const imageUrl = await helpers.uploadFile(myFile, payload.userId)
+
+
+        res
+          .status(200)
+          .json({
+            message: "Upload was successful",
+            data: imageUrl
+          })
+      } catch (error) {
+        next(error)
+      }
+}
+
+exports.testDownloadDocument = async (req, res) => {
+    const {filename} = req.body;
+
+    const url = await helpers.getDownloadLink(filename);
+
+    res.status(200).json({
+        url: url
+    });
+}
+
+exports.deleteDocument = async (req, res) => {
+    const {filename} = req.body;
+
+    const returnDelete = await helpers.deleteFile(filename);
+    if (returnDelete != true) res.status(500).json({message: "Error occurred while deleting file!"});
 }

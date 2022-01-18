@@ -22,6 +22,7 @@ const conn = require('../models');
 
 exports.createAffiliate = async (req, res) => {
     const session = await conn.startSession();
+    console.log('entered')
     try {
         session.startTransaction();
 
@@ -435,7 +436,7 @@ exports.login = async (req, res) => {
             return;
         }
         
-        const accessToken = jwt.sign({ userId: user._id }, process.env.SECRET, {
+        const accessToken = jwt.sign({ userId: user._id, role: user.role}, process.env.SECRET, {
         expiresIn: "1d"
         });
 
