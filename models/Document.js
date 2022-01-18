@@ -28,7 +28,10 @@ const documentSchema = new mongoose.Schema({
     permittedUsers: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Credentials"
-    }]
+    }],
+    filename: {
+        type: String
+    }
 },
 {
     timestamps: true,

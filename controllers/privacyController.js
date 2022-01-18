@@ -10,23 +10,65 @@ const MedicalProfessional = mongoose.model('MedicalProfessional');
 
 const conn = require('../models');
 
+const jwt = require('jsonwebtoken');
+
 exports.getTrustedUsers = async (req, res) => {
     try {
-        const creds = res.locals.loggedInUser;
-        if (creds.role != 'affiliate') throw "You don't have enough permission to perform this action"
+        const token = req.headers.authorization;
+        const accessToken = token.split(' ')[1];
+        const payload = await jwt.verify(accessToken, process.env.SECRET);
+
+        if (payload.role != 'affiliate') return res.status(401).json({message:"You don't have enough permission to perform this action"});
         
-        const affiliateExists = await Affiliate.findOne({credentials: creds._id});
+        const affiliateExists = await Affiliate.findOne({credentials: payload.userId});
         if(!affiliateExists) throw "Affiliate doesn't exist!";
 
-        await affiliateExists.populate({
-            path: 'trustedUsers',
-            select: 'userName role'
+        // await affiliateExists.populate({
+        //     path: 'trustedUsers',
+        //     select: 'userName role'
+        // });
+
+        //console.log(affiliateExists);
+        
+        const trustedUsers = affiliateExists.trustedUsers.map(id => ({id}));
+
+        const medicalProfessionals = await MedicalProfessional.find({
+            'credentials': {$in: affiliateExists.trustedUsers}
+        }, 'medicalLicense profile credentials').populate([{
+            path: 'profile',
+            select: 'name lastName birthDate'
+        }, {
+            path: 'credentials',
+            select: 'role'
+        }]);
+
+        const affiliates = await Affiliate.find({
+            'credentials': {$in: affiliateExists.trustedUsers}
+        }, 'idNumber profile credentials').populate([{
+            path: 'profile',
+            select: 'name lastName birthDate'
+        }, {
+            path: 'credentials',
+            select: 'role'
+        }]);
+
+        var mergedList = medicalProfessionals.concat(affiliates);
+        var result = [];
+        
+        mergedList.forEach(i => {
+            if (i.credentials.role == 'affiliate') {
+                var newObject = {name: i.profile.name + ' ' + i.profile.lastName, role: i.credentials.role, idNumber: i.idNumber, age: calculate_age(i.profile.birthDate) };
+                result.push(newObject)
+            } else if (i.credentials.role == 'medicalProfessional') {
+                var newObject = {name: i.profile.name + ' ' + i.profile.lastName, role: i.credentials.role, idNumber: i.medicalLicense, age: calculate_age(i.profile.birthDate) };
+                result.push(newObject)
+            }
         });
 
-        res.json({
-            data: affiliateExists.trustedUsers
+        res.status(200).json({
+            message: "Success",
+            data: result
         });
-
     } catch (error) {
         throw error;
     }
@@ -40,11 +82,15 @@ exports.addTrustedUser = async (req, res) => {
         const { 
             trustedUserName,
         } = req.body
-    
-        const creds = res.locals.loggedInUser;
-        if (creds.role != 'affiliate') throw "You don't have enough permission to perform this action";
 
-        const affiliateExists = await Affiliate.findOne({credentials: creds._id});
+        const token = req.headers.authorization;
+        const accessToken = token.split(' ')[1];
+        const payload = await jwt.verify(accessToken, process.env.SECRET);
+    
+        // const creds = res.locals.loggedInUser;
+        // if (creds.role != 'affiliate') throw "You don't have enough permission to perform this action";
+
+        const affiliateExists = await Affiliate.findOne({credentials: payload.userId});
         if(!affiliateExists) throw "Affiliate doesn't exist!";
 
         const trustedUserExists = await Credentials.findOne({userName: trustedUserName});
@@ -230,6 +276,13 @@ exports.getDocumentsTrustedUser = async (req, res) => {
     res.json({
         data: documents
     });
+}
+
+function calculate_age(dob) { 
+    var diff_ms = Date.now() - dob.getTime();
+    var age_dt = new Date(diff_ms); 
+  
+    return Math.abs(age_dt.getUTCFullYear() - 1970);
 }
 
 // exports.getAffiliates = async (req, res) => {
