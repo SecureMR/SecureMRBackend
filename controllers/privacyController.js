@@ -22,13 +22,6 @@ exports.getTrustedUsers = async (req, res) => {
         
         const affiliateExists = await Affiliate.findOne({credentials: payload.userId});
         if(!affiliateExists) throw "Affiliate doesn't exist!";
-
-        // await affiliateExists.populate({
-        //     path: 'trustedUsers',
-        //     select: 'userName role'
-        // });
-
-        //console.log(affiliateExists);
         
         const trustedUsers = affiliateExists.trustedUsers.map(id => ({id}));
 
@@ -57,10 +50,22 @@ exports.getTrustedUsers = async (req, res) => {
         
         mergedList.forEach(i => {
             if (i.credentials.role == 'affiliate') {
-                var newObject = {name: i.profile.name + ' ' + i.profile.lastName, role: i.credentials.role, idNumber: i.idNumber, age: calculate_age(i.profile.birthDate) };
+                var newObject = {
+                    id: i.credentials.id.toString(),
+                    name: i.profile.name + ' ' + i.profile.lastName, 
+                    role: i.credentials.role, 
+                    idNumber: i.idNumber, 
+                    age: calculate_age(i.profile.birthDate) 
+                };
                 result.push(newObject)
             } else if (i.credentials.role == 'medicalProfessional') {
-                var newObject = {name: i.profile.name + ' ' + i.profile.lastName, role: i.credentials.role, idNumber: i.medicalLicense, age: calculate_age(i.profile.birthDate) };
+                var newObject = {
+                    id: i.credentials.id.toString(),
+                    name: i.profile.name + ' ' + i.profile.lastName, 
+                    role: i.credentials.role, 
+                    idNumber: i.medicalLicense, 
+                    age: calculate_age(i.profile.birthDate) 
+                };
                 result.push(newObject)
             }
         });
@@ -80,29 +85,35 @@ exports.addTrustedUser = async (req, res) => {
         session.startTransaction();
 
         const { 
-            trustedUserName,
+            id,
         } = req.body
+
+        if(!mongoose.Types.ObjectId.isValid(id)){
+            return res.status(400).json({message: 'Incorrect id format!'});
+        }
+        var trustedUserId = mongoose.Types.ObjectId(id);
 
         const token = req.headers.authorization;
         const accessToken = token.split(' ')[1];
         const payload = await jwt.verify(accessToken, process.env.SECRET);
     
-        // const creds = res.locals.loggedInUser;
-        // if (creds.role != 'affiliate') throw "You don't have enough permission to perform this action";
+        if (payload.role != 'affiliate') throw "You don't have enough permission to perform this action";
 
         const affiliateExists = await Affiliate.findOne({credentials: payload.userId});
         if(!affiliateExists) throw "Affiliate doesn't exist!";
 
-        const trustedUserExists = await Credentials.findOne({userName: trustedUserName});
+        const trustedUserExists = await Credentials.findById(trustedUserId);
         if(!trustedUserExists) throw "User doesn't exist!";
 
         await affiliateExists.populate('trustedUsers');
 
         var result = affiliateExists.trustedUsers.filter(obj => {
-            return obj._id === trustedUserExists._id
+            return obj._id === trustedUserId
         });
 
-        if(Object.keys(result).length !== 0) throw "User is already trusted!";
+        console.log(result)
+
+        if(Object.keys(result).length !== 0) return res.status(400).json({message: "User is already trusted!"});
 
         affiliateExists.trustedUsers.push(trustedUserExists._id);
 
@@ -111,8 +122,8 @@ exports.addTrustedUser = async (req, res) => {
         await session.commitTransaction();
         await session.endSession();
 
-        res.json({
-            data: "Added Trusted User: " + trustedUserExists._id
+        res.status(200).json({
+            message: "Added Trusted User: " + trustedUserExists._id
         });
 
     } catch (error) {
@@ -127,13 +138,26 @@ exports.deleteTrustedUser = async (req, res) => {
         session.startTransaction();
         const { trustedUserName  } = req.body;
 
-        const creds = res.locals.loggedInUser;
-        if (creds.role != 'affiliate') throw "You don't have enough permission to perform this action";
+        const { 
+            id,
+        } = req.body
 
-        const affiliateExists = await Affiliate.findOne({credentials: creds._id}).populate('trustedUsers');
+        if(!mongoose.Types.ObjectId.isValid(id)){
+            return res.status(400).json({message: 'Incorrect id format!'});
+        }
+        var trustedUserId = mongose.Types.ObjectId(id);
+
+        const token = req.headers.authorization;
+        const accessToken = token.split(' ')[1];
+        const payload = await jwt.verify(accessToken, process.env.SECRET);
+    
+        if (payload.role != 'affiliate') throw "You don't have enough permission to perform this action";
+
+
+        const affiliateExists = await Affiliate.findOne({credentials: payload.userId}).populate('trustedUsers');
         if(!affiliateExists) throw "Affiliate does not exist!";
 
-        const trustedUserExists = await Credentials.findOne({userName: trustedUserName});
+        const trustedUserExists = await Credentials.findOne({_id: trustedUserId});
         if(!trustedUserExists) throw "Trusted User does not exist!";
 
         var filter = affiliateExists.trustedUsers.filter(obj => {

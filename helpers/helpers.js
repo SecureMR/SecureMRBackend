@@ -45,7 +45,7 @@ async function getDownloadLink(filename) {
         const options = {
             version: 'v4',
             action: 'read',
-            expires: Date.now() + 15 * 60 * 1000,
+            expires: Date.now() + 7200 * 60 * 1000,
         };
     
         const [url] = await bucket.file(filename).getSignedUrl(options);
