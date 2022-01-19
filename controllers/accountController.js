@@ -442,11 +442,23 @@ exports.login = async (req, res) => {
 
         await Credentials.findByIdAndUpdate(user._id, { accessToken })
 
+        var name = '';
+
+        if(user.role == 'affiliate'){
+            var userProfile = await Affiliate.findOne({credentials:user._id}).populate('profile');
+            name = userProfile.profile.name + ' ' + userProfile.profile.lastName;
+        } else if (user.role == 'pss'){
+            var userProfile = await PSS.findOne({credentials: user._id});
+            name = userProfile.medicalCenter;
+        }
+
         await session.commitTransaction();
         await session.endSession();
 
         res.status(200).json({
-            data: { userName: user.userName, role: user.role, accessToken: accessToken },
+            message:"Success",
+            data: { userName: user.userName, name: name,
+                role: user.role, accessToken: accessToken },
         });
     } catch(error) {
         session.abortTransaction();
