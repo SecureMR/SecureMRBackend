@@ -421,6 +421,28 @@ exports.getPSS = async (req, res) => {
     });
 }
 
+exports.getAllARS = async (req, res) => {
+    const arss = await ARS.find().populate('profile');
+
+    var data = []
+
+    arss.forEach(element => {
+        var object = {};
+
+        object.id = element._id;
+        object.name = element.company;
+        object.email = element.profile.email;
+        object.address = element.profile.address;
+
+        data.push(object)
+    });
+
+    res.status(200).json({
+        message: "Success",
+        data: data
+    })
+}
+
 exports.login = async (req, res) => {
     const session = await conn.startSession();
     

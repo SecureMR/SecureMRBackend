@@ -20,6 +20,8 @@ router.get("/accounts/pss", auth, catchErrors(accountController.getPSS));
 router.get("/accounts/ars", auth, catchErrors(accountController.getARS));
 router.get("/accounts/medicalProfessional", auth, catchErrors(accountController.getMedicalProfessional));
 
+router.get("/accounts/ars/all", auth, catchErrors(accountController.getAllARS))
+
 router.post("/privacy/affiliate/trustedusers/add", auth, catchErrors(privacyController.addTrustedUser));
 router.get("/privacy/affiliate/trustedusers/get", auth, catchErrors(privacyController.getTrustedUsers));
 router.get("/privacy/affiliate/trustedusers/getdocument", auth, catchErrors(privacyController.getOneDocumentTrustedUser));
