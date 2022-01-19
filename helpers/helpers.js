@@ -15,9 +15,9 @@ const { format } = util
  */
 
 exports.uploadFile = (file, userId) => new Promise((resolve, reject) => {
-  const { originalname, buffer } = file;
+  var { originalname, buffer } = file;
 
-  originalname = userId + '/' + originalName;
+//   filename = userId + '/' + filename;
 
   const blob = bucket.file(originalname.replace(/ /g, "_"))
   const blobStream = blob.createWriteStream({

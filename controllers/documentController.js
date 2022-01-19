@@ -6,6 +6,9 @@ const Document = mongoose.model('Document');
 const DocType = mongoose.model('DocType');
 const PSS = mongoose.model('PSS');
 
+const jwt = require('jsonwebtoken');
+
+
 const conn = require('../models');
 
 const helpers = require('../helpers/helpers')
