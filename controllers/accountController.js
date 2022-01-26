@@ -642,6 +642,7 @@ exports.getContacts = async (req, res) => {
         var contactsAsRequester = await Contact.find({requester:user._id, status:"accepted"});
 
         var contactsArray = [];
+        //
 
         for (const element of contactsAsRecipient) {
             var contact = await Credentials.findById(element.requester);
