@@ -8,6 +8,8 @@ const Credentials = mongoose.model('Credentials');
 const Dependent = mongoose.model('Dependent');
 const MedicalProfessional = mongoose.model('MedicalProfessional');
 const Profile = mongoose.model('Profile');
+const Contact = mongoose.model('Contact');
+
 const PSS = mongoose.model('PSS');
 
 async function hashPassword(password) {
@@ -19,10 +21,11 @@ return await bcrypt.compare(plainPassword, hashedPassword);
 }
 
 const conn = require('../models');
+const { request } = require('express');
 
 exports.createAffiliate = async (req, res) => {
     const session = await conn.startSession();
-    console.log('entered')
+    
     try {
         session.startTransaction();
 
@@ -483,7 +486,7 @@ exports.login = async (req, res) => {
                 role: user.role, accessToken: accessToken },
         });
     } catch(error) {
-        session.abortTransaction();
+        await session.abortTransaction();
         throw error;
     }
     
@@ -509,31 +512,214 @@ exports.sendContactRequest = async (req, res) => {
     const session = await conn.startSession();
 
     try {
-        sessions.startTransaction();
+        session.startTransaction();
 
-        const accessToken = req.headers["x-access-token"];
-        if(!accessToken) throw "Access token is needed";
+        const token = req.headers.authorization;
+        const accessToken = token.split(' ')[1];
+        const payload = await jwt.verify(accessToken, process.env.SECRET);
 
-        const credential = await Credentials.findOne({accessToken: accessToken});
+
+        var requester = await Credentials.findOne({_id: payload.userId});
+        if(!requester) return res.status(401).json({message:"User doesn't exist!"});
         
+        const {recipient} = req.body;
 
-        const {requester, recipient} = req.body;
+        if(!mongoose.Types.ObjectId.isValid(recipient)) return res.status(401).json({message:"Recipient id is not formatted correctly!"});
 
-        if(!mongoose.Types.ObjectId.isValid(requester)) throw "Requester ID is not formatted correctly!";
-        if(!mongoose.Types.ObjectId.isValid(recipient)) throw "Recipient ID is not formatted correctly!";
+        var recipient2 = await Credentials.findOne({_id: recipient});
+        if(!recipient2) return res.status(401).json({message:"Recipient doesn't exist!"});
 
-        const requesterCredential = await Credentials.findById(requester);
-        if(!requesterCredential) throw "Requester doesn't exist";
+        var newContactRequest = new Contact({
+            requester: requester._id,
+            recipient: recipient2._id,
+            status: "requested"
+        })
 
-        const recipientCredential = await Credentials.findById(recipient);
-        if(!recipientCredential) throw "Recipient doesn't exist";
+        await newContactRequest.save({session});
 
-        
+        await session.commitTransaction();
+        await session.endSession();
 
-
+        return res.status(200).json({message: "Sent contact request successfully"});
     }
     catch(error){
-        session.abortTransaction();
+        await session.abortTransaction();
+        throw error;
+    }
+}
+
+exports.handleContactRequest = async (req, res) => {
+    const session = await conn.startSession();
+
+    try {
+        session.startTransaction();
+
+        const token = req.headers.authorization;
+        const accessToken = token.split(' ')[1];
+        const payload = await jwt.verify(accessToken, process.env.SECRET);
+
+
+        var recipient = await Credentials.findOne({_id: payload.userId});
+        if(!recipient) return res.status(401).json({message:"User doesn't exist!"});
+        
+        const {contactRequestId, accept} = req.body;
+
+        if(!mongoose.Types.ObjectId.isValid(contactRequestId)) return res.status(401).json({message:"Contact Request ID is not formatted correctly!"});
+
+        var contactRequest = await Contact.findById(contactRequestId);
+        if(!contactRequest) res.status(401).json({message:"Contact request doens't exist!"})
+
+        var requester = await Credentials.findById(contactRequest.requester);
+        if(!contactRequest) res.status(401).json({message:"Requester doens't exist!"})
+
+
+        if(accept == "true") {
+            contactRequest.status = "accepted"
+            await contactRequest.save({session});
+
+        } else if (accept == "false") {
+            contactRequest.status = "rejected"
+            await contactRequest.save({session});
+
+        } else {
+            await session.abortTransaction();
+            return res.status(401).json({message:"Incorrect accept formatting!"});
+        }
+
+        await session.commitTransaction();
+        await session.endSession();
+
+        return res.status(200).json({message: "Added or rejected contact succesfully"})
+    }
+    catch(error){
+        await session.abortTransaction();
+        throw error;
+    }
+}
+
+exports.getContactRequests = async (req,res) => {
+    const session = await conn.startSession();
+
+    try {
+        session.startTransaction();
+
+        const token = req.headers.authorization;
+        const accessToken = token.split(' ')[1];
+        const payload = await jwt.verify(accessToken, process.env.SECRET);
+
+        var user = await Credentials.findOne({_id: payload.userId});
+        if(!user) return res.status(401).json({message:"User doesn't exist!"});
+
+        var contactRequests = await Contact.find({recipient:user._id, status:"requested"});
+
+        return res.status(200).json({
+            message: "Success",
+            data: contactRequests
+        })
+
+
+
+    } catch (error) {
+        await session.abortTransaction();
+        throw error;
+    }
+}
+
+exports.getContacts = async (req, res) => {
+    const session = await conn.startSession();
+
+    try {
+        session.startTransaction();
+
+        const token = req.headers.authorization;
+        const accessToken = token.split(' ')[1];
+        const payload = await jwt.verify(accessToken, process.env.SECRET);
+
+        var user = await Credentials.findOne({_id: payload.userId});
+        if(!user) return res.status(401).json({message:"User doesn't exist!"});
+
+        var contactsAsRecipient = await Contact.find({recipient:user._id, status:"accepted"});
+        var contactsAsRequester = await Contact.find({requester:user._id, status:"accepted"});
+
+        var contactsArray = [];
+
+        for (const element of contactsAsRecipient) {
+            var contact = await Credentials.findById(element.requester);
+
+            if(contact.role == "affiliate"){
+                var affiliate = await Affiliate.findOne({credentials: contact._id});
+
+                var profile = await Profile.findById(affiliate.profile);
+
+                var object = {
+                    id: contact._id,
+                    name: profile.name + ' ' + profile.lastName,
+                    email: profile.email,
+                    role: "Afiliado"
+                }
+                contactsArray.push(object)
+
+            }
+
+            if(contact.role == "pss"){
+                var pss = await PSS.findOne({credentials: contact._id});
+
+                var profile = await Profile.findById(pss.profile);
+
+                var object = {
+                    id: contact._id,
+                    name: pss.medicalCenter,
+                    email: profile.email,
+                    role: "PSS"
+                }
+                contactsArray.push(object);
+
+            }
+        };
+
+        for (const element of contactsAsRequester) {
+            var contact = await Credentials.findById(element.recipient);
+
+            if(contact.role == "affiliate"){
+                var affiliate = await Affiliate.findOne({credentials: contact._id});
+
+                var profile = await Profile.findById(affiliate.profile);
+
+                var object = {
+                    id: contact._id,
+                    name: profile.name + ' ' + profile.lastName,
+                    email: profile.email,
+                    role: "Afiliado"
+                }
+                contactsArray.push(object)
+
+            }
+
+            if(contact.role == "pss"){
+                var pss = await PSS.findOne({credentials: contact._id});
+
+                var profile = await Profile.findById(pss.profile);
+
+                var object = {
+                    id: contact._id,
+                    name: pss.medicalCenter,
+                    email: profile.email,
+                    role: "PSS"
+                }
+                contactsArray.push(object);
+
+            }
+        };
+
+        return res.status(200).json({
+            message: "Success",
+            data: contactsArray
+        })
+
+
+
+    } catch (error) {
+        await session.abortTransaction();
         throw error;
     }
 }

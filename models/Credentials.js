@@ -23,9 +23,9 @@ const credentialsSchema = new mongoose.Schema({
     accessToken: {
         type: String
     },
-    contacts: [{
-        type: mongoose.Schema.Types.ObjectId
-    }]
+    // contacts: [{
+    //     type: mongoose.Schema.Types.ObjectId
+    // }]
 },
 {
     timestamps: true,
