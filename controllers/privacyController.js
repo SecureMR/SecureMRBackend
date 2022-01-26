@@ -21,7 +21,14 @@ exports.getTrustedUsers = async (req, res) => {
         if (payload.role != 'affiliate') return res.status(401).json({message:"You don't have enough permission to perform this action"});
         
         const affiliateExists = await Affiliate.findOne({credentials: payload.userId});
-        if(!affiliateExists) throw "Affiliate doesn't exist!";
+        if(!affiliateExists) return res.status(401).json({message:"Affiliate doesn't exist!"});
+
+        // await affiliateExists.populate({
+        //     path: 'trustedUsers',
+        //     select: 'userName role'
+        // });
+
+        //console.log(affiliateExists);
         
         const trustedUsers = affiliateExists.trustedUsers.map(id => ({id}));
 

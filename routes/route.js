@@ -22,6 +22,11 @@ router.get("/accounts/medicalProfessional", auth, catchErrors(accountController.
 
 router.get("/accounts/ars/all", auth, catchErrors(accountController.getAllARS))
 
+router.post("/accounts/contact/request",auth,catchErrors(accountController.sendContactRequest));
+router.post("/accounts/contact/respond",auth,catchErrors(accountController.handleContactRequest));
+router.get("/accounts/contact/requests",auth,catchErrors(accountController.getContactRequests));
+router.get("/accounts/contact/all",auth,catchErrors(accountController.getContacts));
+
 router.post("/privacy/affiliate/trustedusers/add", auth, catchErrors(privacyController.addTrustedUser));
 router.get("/privacy/affiliate/trustedusers/get", auth, catchErrors(privacyController.getTrustedUsers));
 router.get("/privacy/affiliate/trustedusers/getdocument", auth, catchErrors(privacyController.getOneDocumentTrustedUser));
@@ -29,6 +34,8 @@ router.get("/privacy/affiliate/trustedusers/getdocuments", auth, catchErrors(pri
 router.delete("/privacy/affiliate/trustedusers/delete", auth, catchErrors(privacyController.deleteTrustedUser));
 router.post("/privacy/affiliate/documentrequests/add", auth, catchErrors(privacyController.requestDocuments));
 router.post("/privacy/affiliate/documentrequests/changestate", auth, catchErrors(privacyController.changeDocumentRequestState));
+
+
 
 router.post("/documents/add", auth, catchErrors(documentController.addDocument))
 router.delete("/documents/delete", auth, catchErrors(documentController.deleteDocument))
